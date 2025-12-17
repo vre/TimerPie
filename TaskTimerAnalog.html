@@ -56,6 +56,13 @@
     body.fullscreen .controls {
       display: none;
     }
+    body.running .controls {
+      opacity: 0.1;
+      transition: opacity 0.3s;
+    }
+    body.running .controls:hover {
+      opacity: 1;
+    }
     .fullscreen-btn {
       padding: 0.5rem 0.75rem;
       background: #e5e7eb;
@@ -980,6 +987,7 @@
         state.running = false;
         state.paused = false;
         ClockLogic.releaseWakeLock();
+        document.body.classList.remove('running');
         el.goBtn.classList.remove('running');
         el.goBtn.textContent = 'Go';
         el.goBtn.title = 'Start the timer';
@@ -1094,6 +1102,7 @@
       state.paused = false;
       ClockLogic.requestWakeLock();
       el.goBtn.classList.add('running');
+      document.body.classList.add('running');
       if (state.mode === 'end') {
         // No pause in END mode - target time is fixed
         el.goBtn.disabled = true;
@@ -1109,6 +1118,7 @@
       state.paused = true;
       state.running = false;
       ClockLogic.releaseWakeLock();
+      document.body.classList.remove('running');
       if (state.animFrame !== null) {
         cancelAnimationFrame(state.animFrame);
         state.animFrame = null;
@@ -1124,6 +1134,7 @@
       state.paused = false;
       state.running = true;
       ClockLogic.requestWakeLock();
+      document.body.classList.add('running');
       state.startTime = Date.now() - (state.total - state.remaining) * 60000;
       el.goBtn.classList.add('running');
       el.goBtn.textContent = 'Pause';
@@ -1288,6 +1299,7 @@
           cancelAnimationFrame(state.animFrame);
           state.animFrame = null;
         }
+        document.body.classList.remove('running');
         el.goBtn.classList.remove('running');
         ClockLogic.releaseWakeLock();
         updateTitle();
