@@ -42,7 +42,7 @@ function assertNotNull(value, message) {
 
 // Load HTML and create DOM
 function createDOM() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously',
     resources: 'usable',
@@ -1017,11 +1017,10 @@ console.log('----------------------------------');
   const modeLabel = document.querySelector('.control-row label');
   assertNotNull(modeLabel, 'Control row has a label element');
 
-  // Check for specific labels
+  // Check for specific labels (Labels: removed to make room for display mode button)
   const labels = document.querySelectorAll('.control-row label');
   const labelTexts = Array.from(labels).map(l => l.textContent);
   assert(labelTexts.some(t => t.includes('Mode')), 'Mode label exists');
-  assert(labelTexts.some(t => t.includes('Label')), 'Labels label exists');
   assert(labelTexts.some(t => t.includes('Time')), 'Time label exists');
 
   dom.window.close();
@@ -1210,7 +1209,7 @@ console.log('-------------------------------------');
 
 (function testPreferencesRestoredFromCookies() {
   // Create DOM with pre-set cookies
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const cookieJar = new (require('jsdom').CookieJar)();
   cookieJar.setCookieSync('clockColor=#4a90e2', 'http://localhost');
   cookieJar.setCookieSync('clockMode=cw', 'http://localhost');
@@ -1285,7 +1284,7 @@ console.log('-------------------------------------------');
 
 (function testCookieValueValidation() {
   // Test that invalid color values are rejected when restoring
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const cookieJar = new (require('jsdom').CookieJar)();
   // Set invalid color value
   cookieJar.setCookieSync('clockColor=invalid', 'http://localhost');
@@ -1313,7 +1312,7 @@ console.log('Integration Tests: Tooltips');
 console.log('----------------------------');
 
 (function testStaticTooltips() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { document } = dom.window;
 
@@ -1343,7 +1342,7 @@ console.log('----------------------------');
 })();
 
 (function testDynamicTooltips() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { document } = dom.window;
 
@@ -1381,7 +1380,7 @@ console.log('Integration Tests: Keyboard Shortcuts');
 console.log('--------------------------------------');
 
 (function testKeyboardShortcuts() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { document } = dom.window;
 
@@ -1414,7 +1413,7 @@ console.log('--------------------------------------');
 })();
 
 (function testSpaceIgnoredInEndMode() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { document } = dom.window;
 
@@ -1446,7 +1445,7 @@ console.log('Integration Tests: URL Sharing');
 console.log('-------------------------------');
 
 (function testUrlHashUpdate() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously',
     pretendToBeVisual: true,
@@ -1472,7 +1471,7 @@ console.log('-------------------------------');
 })();
 
 (function testUrlHashParsing() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously',
     pretendToBeVisual: true,
@@ -1515,7 +1514,7 @@ console.log('--------------------------------------');
 })();
 
 (function testPipButtonExists() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { document } = dom.window;
 
@@ -1540,7 +1539,7 @@ console.log('Integration Tests: Alarm Sound');
 console.log('-------------------------------');
 
 (function testSoundButtonExists() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { document } = dom.window;
 
@@ -1554,7 +1553,7 @@ console.log('-------------------------------');
 })();
 
 (function testSoundToggle() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { document, ClockLogic } = dom.window;
 
@@ -1587,7 +1586,7 @@ console.log('-------------------------------');
 })();
 
 (function testPlayAlarmFunctionExists() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { ClockLogic } = dom.window;
 
@@ -1602,7 +1601,7 @@ console.log('Integration Tests: PWA Manifest');
 console.log('--------------------------------');
 
 (function testManifestLinkExists() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { document } = dom.window;
 
@@ -1629,7 +1628,7 @@ console.log('--------------------------------');
 })();
 
 (function testPWAMetaTags() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { document } = dom.window;
 
@@ -1696,7 +1695,7 @@ console.log('Integration Tests: Wake Lock');
 console.log('-----------------------------');
 
 (function testWakeLockFunctionsExist() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { ClockLogic } = dom.window;
 
@@ -1707,7 +1706,7 @@ console.log('-----------------------------');
 })();
 
 (function testWakeLockReleaseClearsReference() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { ClockLogic } = dom.window;
 
@@ -1722,7 +1721,7 @@ console.log('-----------------------------');
 })();
 
 (function testVisibilityChangeHandlerExists() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
 
   // Check that visibilitychange event listener is registered
   assert(html.includes('visibilitychange'), 'Visibility change listener registered');
@@ -1737,7 +1736,7 @@ console.log('Accessibility Tests');
 console.log('-------------------');
 
 (function testSVGAccessibility() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { document } = dom.window;
 
@@ -1752,7 +1751,7 @@ console.log('-------------------');
 })();
 
 (function testARIALiveRegion() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { document } = dom.window;
 
@@ -1765,7 +1764,7 @@ console.log('-------------------');
 })();
 
 (function testPresetButtonAriaLabels() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimerAnalog.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TaskTimer.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { document } = dom.window;
 

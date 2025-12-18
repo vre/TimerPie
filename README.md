@@ -1,6 +1,6 @@
 # TaskTimer
 
-**[▶ Try it now](https://vre.github.io/tasktimer/TaskTimerAnalog.html)**
+**[▶ Try it now](https://vre.github.io/tasktimer/TaskTimer.html)**
 
 Analog countdown timer that runs entirely in your browser from single file. No ads, no servers, no tracking, no dependencies.
 
@@ -26,7 +26,7 @@ Analog countdown timer that runs entirely in your browser from single file. No a
 
 ## Usage
 
-Open [TaskTimerAnalog.html](https://vre.github.io/tasktimer/TaskTimerAnalog.html) in any modern browser. That's it.
+Open [TaskTimer.html](https://vre.github.io/tasktimer/TaskTimer.html) in any modern browser. That's it.
 You can also copy it to your machine (Save As) and open from there.
 Or when opening from website such as GitHub, you can also install as a PWA (Progressive Web App).
 

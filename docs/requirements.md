@@ -80,7 +80,7 @@
 - [x] 66. PWA icons: SVG source icon with PNG exports (192x192, 512x512) showing 25-minute timer
 - [x] 67. Sound preference in URL hash: sound=off parameter for bookmarking muted state
 - [x] 68. Go button after completion: enabled if input has valid value so user can restart timer
-- [x] 69. File renamed: clock.html → TaskTimerAnalog.html
+- [x] 69. File renamed: clock.html → TaskTimer.html
 - [x] 70. Wake lock: keeps screen on while timer is running using Screen Wake Lock API, released on pause/stop/typing, re-requested on tab visibility
 
 ## Security & Accessibility
@@ -106,6 +106,13 @@
 ## Visual Refinements (v2)
 - [x] 85. Light mode pie border: stroke matches fill color (no black border)
 - [x] 86. Moving edge indicator: black edge line in light mode, white in dark mode
+
+## Display Mode Toggle
+- [x] 87. Analog/Digital toggle: A/D button switches between pie (analog) and ring (digital) display modes
+- [x] 88. Digital rings: all rings fit in outer 1/3 of radius (180→120), inner 2/3 empty
+- [x] 89. Center countdown: digital mode shows MM:SS countdown in center
+- [x] 90. Digital completion: static colored center + pulsing ring + overtime counter (-0:01, -0:02...)
+- [x] 91. Display mode preference: saved in cookie and URL hash (display=digital)
 
 ## Future Enhancements
 - [ ] 61. Safari PiP support: re-enable when Safari supports canvas captureStream with PiP (check WebKit bug 181663)

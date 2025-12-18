@@ -209,6 +209,14 @@
     .color-option:hover {
       transform: scale(1.1);
     }
+    .icon-group {
+      display: flex;
+      gap: 0.125rem;
+    }
+    .mark-group {
+      display: flex;
+      gap: 0.125rem;
+    }
     .mode-btn {
       padding: 0.5rem 1rem;
       background: #e5e7eb;
@@ -311,12 +319,16 @@
             <button class="color-option" style="background: #f1c40f;" data-color="#f1c40f" role="menuitem" aria-label="Yellow"></button>
           </div>
         </div>
-        <button class="mode-btn" id="darkModeBtn" title="Switch to dark mode" aria-label="Switch to dark mode">D</button>
-        <button class="mode-btn" id="soundBtn" title="Toggle alarm sound" aria-label="Toggle alarm sound">🔔</button>
-        <label>Labels:</label>
-        <button class="mode-btn active" data-marks="15" title="Show 15-minute labels">15</button>
-        <button class="mode-btn" data-marks="5" title="Show 5-minute labels">5</button>
-        <button class="mode-btn" data-marks="0" title="Hide labels">-</button>
+        <span class="icon-group">
+          <button class="mode-btn" id="soundBtn" title="Toggle alarm sound" aria-label="Toggle alarm sound">🔔</button>
+          <button class="mode-btn" id="darkModeBtn" title="Switch to dark mode" aria-label="Switch to dark mode">🌙</button>
+          <button class="mode-btn" id="displayModeBtn" title="Switch to digital display" aria-label="Switch display mode">🕐</button>
+        </span>
+        <span class="mark-group">
+          <button class="mode-btn active" data-marks="15" title="Show 15-minute labels">15</button>
+          <button class="mode-btn" data-marks="5" title="Show 5-minute labels">5</button>
+          <button class="mode-btn" data-marks="0" title="Hide labels">-</button>
+        </span>
       </div>
       <div class="control-row">
         <label>Mode:</label>
@@ -524,7 +536,7 @@
       parseHash: function() {
         var hash = window.location.hash.substring(1);
         var params = {};
-        var allowedParams = ['color', 'mode', 'marks', 'dark', 'sound', 'time'];
+        var allowedParams = ['color', 'mode', 'marks', 'dark', 'sound', 'time', 'display'];
         if (hash) {
           hash.split('&').forEach(function(pair) {
             var parts = pair.split('=');
@@ -552,6 +564,9 @@
         }
         if (state.sound === false) {
           params.push('sound=off');
+        }
+        if (state.displayMode === 'digital') {
+          params.push('display=digital');
         }
         var hash = params.length > 0 ? '#' + params.join('&') : '';
         history.replaceState(null, '', window.location.pathname + hash);
@@ -665,6 +680,10 @@
     // APPLICATION CONSTANTS
     // ============================================
     const RADIUS = { FULL: 180, MIDDLE: 120, INNER: 60 };
+    // Digital mode: ALL rings fit in outer 1/3 zone (180→120)
+    const RING_ZONE_OUTER = 180;
+    const RING_ZONE_WIDTH = 60;
+    const RING_GAP = 2;
     const CENTER = 225;
     const DARKEN = { MIDDLE: 0.7, INNER: 0.5 };
     const TICK = { MAJOR_LENGTH: 15, MINOR_LENGTH: 8, OUTER_OFFSET: 5, LABEL_OFFSET: 35 };
@@ -679,6 +698,7 @@
       mode: 'ccw',
       marks: 15,
       sound: true,
+      displayMode: 'analog',
       total: 0,
       remaining: 0,
       running: false,
@@ -688,7 +708,9 @@
       endTime: null,
       animFrame: null,
       previewFrame: null,
-      alarmInterval: null
+      alarmInterval: null,
+      completionTime: null,
+      overtimeInterval: null
     };
     window.state = state; // Expose for testing
 
@@ -703,6 +725,7 @@
       svg: document.getElementById('clock'),
       darkModeBtn: document.getElementById('darkModeBtn'),
       soundBtn: document.getElementById('soundBtn'),
+      displayModeBtn: document.getElementById('displayModeBtn'),
       fullscreenBtn: document.getElementById('fullscreenBtn'),
       exitFullscreenBtn: document.getElementById('exitFullscreenBtn'),
       pipBtn: document.getElementById('pipBtn'),
@@ -710,11 +733,20 @@
       pipVideo: document.getElementById('pipVideo')
     };
 
-    // Create layers for static face and dynamic wedges
+    // Create layers for static face, dynamic wedges, and center timer text
     const faceLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     const wedgeLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    const timerText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    timerText.setAttribute('x', CENTER);
+    timerText.setAttribute('y', CENTER);
+    timerText.setAttribute('text-anchor', 'middle');
+    timerText.setAttribute('dominant-baseline', 'central');
+    timerText.setAttribute('font-size', '48');
+    timerText.setAttribute('font-weight', 'bold');
+    timerText.setAttribute('font-family', "'SF Mono', 'Menlo', 'Consolas', 'Liberation Mono', monospace");
     el.svg.appendChild(faceLayer);
     el.svg.appendChild(wedgeLayer);
+    el.svg.appendChild(timerText);
 
     // ============================================
     // APP WRAPPERS (use pure functions with app state)
@@ -768,54 +800,111 @@
       return { start: -90, end: (circle.t / 60) * 360 - 90 };
     }
 
-    function createWedge(circle, start, end, color, opacity) {
+    function createWedge(circle, start, end, color, opacity, ringWidth) {
       const startRad = start * Math.PI / 180;
       const endRad = end * Math.PI / 180;
       let diff = end - start;
       if (diff < 0) diff += 360;
       const isDark = document.body.classList.contains('dark');
       const strokeColor = color; // No black border, stroke matches fill
+      const isDigital = state.displayMode === 'digital' && ringWidth !== undefined;
 
-      const x1 = CENTER + circle.r * Math.cos(startRad);
-      const y1 = CENTER + circle.r * Math.sin(startRad);
-      const x2 = CENTER + circle.r * Math.cos(endRad);
-      const y2 = CENTER + circle.r * Math.sin(endRad);
+      const outerR = circle.r;
+      const innerR = isDigital ? outerR - ringWidth : 0;
+
+      const ox1 = CENTER + outerR * Math.cos(startRad);
+      const oy1 = CENTER + outerR * Math.sin(startRad);
+      const ox2 = CENTER + outerR * Math.cos(endRad);
+      const oy2 = CENTER + outerR * Math.sin(endRad);
+      const ix1 = CENTER + innerR * Math.cos(startRad);
+      const iy1 = CENTER + innerR * Math.sin(startRad);
+      const ix2 = CENTER + innerR * Math.cos(endRad);
+      const iy2 = CENTER + innerR * Math.sin(endRad);
 
       if (circle.full) {
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        c.setAttribute('cx', CENTER);
-        c.setAttribute('cy', CENTER);
-        c.setAttribute('r', circle.r);
-        c.setAttribute('fill', color);
-        c.setAttribute('stroke', strokeColor);
-        c.setAttribute('stroke-width', '2');
-        if (opacity < 1) c.setAttribute('fill-opacity', opacity);
 
-        const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        l.setAttribute('x1', CENTER);
-        l.setAttribute('y1', CENTER);
-        l.setAttribute('x2', x1);
-        l.setAttribute('y2', y1);
-        l.setAttribute('stroke', strokeColor);
-        l.setAttribute('stroke-width', '2');
-        if (opacity < 1) l.setAttribute('stroke-opacity', opacity);
+        if (isDigital) {
+          // Digital mode: donut shape
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          const d = [
+            'M', CENTER + outerR, CENTER,
+            'A', outerR, outerR, 0, 1, 1, CENTER - outerR, CENTER,
+            'A', outerR, outerR, 0, 1, 1, CENTER + outerR, CENTER,
+            'M', CENTER + innerR, CENTER,
+            'A', innerR, innerR, 0, 1, 0, CENTER - innerR, CENTER,
+            'A', innerR, innerR, 0, 1, 0, CENTER + innerR, CENTER,
+            'Z'
+          ].join(' ');
+          path.setAttribute('d', d);
+          path.setAttribute('fill', color);
+          path.setAttribute('fill-rule', 'evenodd');
+          path.setAttribute('stroke', strokeColor);
+          path.setAttribute('stroke-width', '2');
+          if (opacity < 1) path.setAttribute('fill-opacity', opacity);
 
-        g.appendChild(c);
-        g.appendChild(l);
+          // Edge line from inner to outer radius
+          const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          l.setAttribute('x1', ix1);
+          l.setAttribute('y1', iy1);
+          l.setAttribute('x2', ox1);
+          l.setAttribute('y2', oy1);
+          l.setAttribute('stroke', strokeColor);
+          l.setAttribute('stroke-width', '2');
+          if (opacity < 1) l.setAttribute('stroke-opacity', opacity);
+
+          g.appendChild(path);
+          g.appendChild(l);
+        } else {
+          // Analog mode: full circle
+          const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          c.setAttribute('cx', CENTER);
+          c.setAttribute('cy', CENTER);
+          c.setAttribute('r', circle.r);
+          c.setAttribute('fill', color);
+          c.setAttribute('stroke', strokeColor);
+          c.setAttribute('stroke-width', '2');
+          if (opacity < 1) c.setAttribute('fill-opacity', opacity);
+
+          const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          l.setAttribute('x1', CENTER);
+          l.setAttribute('y1', CENTER);
+          l.setAttribute('x2', ox1);
+          l.setAttribute('y2', oy1);
+          l.setAttribute('stroke', strokeColor);
+          l.setAttribute('stroke-width', '2');
+          if (opacity < 1) l.setAttribute('stroke-opacity', opacity);
+
+          g.appendChild(c);
+          g.appendChild(l);
+        }
         return g;
       }
 
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       const largeArc = diff > 180 ? 1 : 0;
-      const dParts = [
-        'M', CENTER, CENTER,
-        'L', x1, y1,
-        'A', circle.r, circle.r, 0, largeArc, 1, x2, y2,
-        'Z'
-      ];
-      path.setAttribute('d', dParts.join(' '));
+
+      if (isDigital) {
+        // Digital mode: arc ring
+        const dParts = [
+          'M', ox1, oy1,
+          'A', outerR, outerR, 0, largeArc, 1, ox2, oy2,
+          'L', ix2, iy2,
+          'A', innerR, innerR, 0, largeArc, 0, ix1, iy1,
+          'Z'
+        ];
+        path.setAttribute('d', dParts.join(' '));
+      } else {
+        // Analog mode: pie wedge
+        const dParts = [
+          'M', CENTER, CENTER,
+          'L', ox1, oy1,
+          'A', circle.r, circle.r, 0, largeArc, 1, ox2, oy2,
+          'Z'
+        ];
+        path.setAttribute('d', dParts.join(' '));
+      }
       path.setAttribute('fill', color);
       path.setAttribute('stroke', strokeColor);
       path.setAttribute('stroke-width', '2');
@@ -825,12 +914,13 @@
 
       // Add edge line following time (moving edge)
       // CCW: end edge moves, CW/END: start edge moves
-      const movingEdge = (state.mode === 'ccw') ? { x: x2, y: y2 } : { x: x1, y: y1 };
+      const movingOuter = (state.mode === 'ccw') ? { x: ox2, y: oy2 } : { x: ox1, y: oy1 };
+      const movingInner = (state.mode === 'ccw') ? { x: ix2, y: iy2 } : { x: ix1, y: iy1 };
       const edge = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      edge.setAttribute('x1', CENTER);
-      edge.setAttribute('y1', CENTER);
-      edge.setAttribute('x2', movingEdge.x);
-      edge.setAttribute('y2', movingEdge.y);
+      edge.setAttribute('x1', isDigital ? movingInner.x : CENTER);
+      edge.setAttribute('y1', isDigital ? movingInner.y : CENTER);
+      edge.setAttribute('x2', movingOuter.x);
+      edge.setAttribute('y2', movingOuter.y);
       edge.setAttribute('stroke', isDark ? '#fff' : '#000');
       edge.setAttribute('stroke-width', '2');
       if (opacity < 1) edge.setAttribute('stroke-opacity', opacity);
@@ -895,47 +985,146 @@
       faceLayer.appendChild(createClockFace());
     }
 
+    function updateTimerText() {
+      const isDark = document.body.classList.contains('dark');
+      timerText.setAttribute('fill', isDark ? '#eee' : '#333');
+
+      // Only show timer text in digital mode
+      if (state.displayMode !== 'digital') {
+        timerText.textContent = '';
+        return;
+      }
+
+      if (state.remaining <= 0) {
+        timerText.textContent = '';
+        return;
+      }
+
+      const mins = Math.floor(state.remaining);
+      const secs = Math.round((state.remaining - mins) * 60);
+      // Handle edge case where rounding gives 60 seconds
+      const displayMins = secs >= 60 ? mins + 1 : mins;
+      const displaySecs = secs >= 60 ? 0 : secs;
+      timerText.textContent = displayMins + ':' + (displaySecs < 10 ? '0' : '') + displaySecs;
+    }
+
+    function updateOvertimeText() {
+      if (!state.completed || state.displayMode !== 'digital') return;
+      const isDark = document.body.classList.contains('dark');
+      timerText.setAttribute('fill', '#fff'); // White on colored background
+
+      const elapsedMs = Date.now() - state.completionTime;
+      const elapsedSecs = Math.floor(elapsedMs / 1000);
+      const mins = Math.floor(elapsedSecs / 60);
+      const secs = elapsedSecs % 60;
+      timerText.textContent = '-' + mins + ':' + (secs < 10 ? '0' : '') + secs;
+    }
+
     function render() {
       wedgeLayer.innerHTML = '';
 
       const circles = getCircles(state.remaining);
-      if (circles.length === 0) return;
+      if (circles.length === 0) {
+        // Clear timer text when no circles
+        if (state.displayMode === 'digital') {
+          timerText.textContent = '';
+        }
+        return;
+      }
 
       const timerEnd = getTimerEndAngle(circles[0]);
       const opacity = !state.running ? PREVIEW_DIM : 1;
+      const numCircles = circles.length;
+
+      // Digital mode: calculate ring width for outer 1/3 zone
+      const ringWidth = state.displayMode === 'digital'
+        ? (RING_ZONE_WIDTH - (numCircles - 1) * RING_GAP) / numCircles
+        : undefined;
 
       for (let i = 0; i < circles.length; i++) {
         const c = circles[i];
+
+        // Digital mode: override radius to fit in outer 1/3 zone
+        if (state.displayMode === 'digital') {
+          c.r = RING_ZONE_OUTER - i * (ringWidth + RING_GAP);
+        }
+
         const angles = getAngles(c, timerEnd);
-        const color = c.full ? darken(state.color, c.r === RADIUS.INNER ? DARKEN.INNER : DARKEN.MIDDLE) : state.color;
-        wedgeLayer.appendChild(createWedge(c, angles.start, angles.end, color, opacity));
+        // Darkening: outer=0.85, middle=0.7, inner=0.5 for digital; analog uses standard
+        const colorFactor = state.displayMode === 'digital'
+          ? (i === 0 ? 0.85 : (i === 1 ? DARKEN.MIDDLE : DARKEN.INNER))
+          : (c.r === RADIUS.INNER ? DARKEN.INNER : DARKEN.MIDDLE);
+        const color = c.full ? darken(state.color, colorFactor) : state.color;
+        wedgeLayer.appendChild(createWedge(c, angles.start, angles.end, color, opacity, ringWidth));
       }
+
+      // Update center timer text (digital mode only)
+      updateTimerText();
     }
 
     function startCompletionBlink() {
       state.completed = true;
+      state.completionTime = Date.now();
       state.alarmHandle = ClockLogic.playAlarm(state);
       wedgeLayer.innerHTML = '';
 
-      // Create background circle (white in light mode, black in dark mode)
       const isDark = document.body.classList.contains('dark');
-      const bgCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      bgCircle.setAttribute('cx', CENTER);
-      bgCircle.setAttribute('cy', CENTER);
-      bgCircle.setAttribute('r', RADIUS.FULL);
-      bgCircle.setAttribute('fill', isDark ? '#111' : 'white');
-      bgCircle.setAttribute('stroke', isDark ? '#eee' : '#000');
-      bgCircle.setAttribute('stroke-width', '2');
-      wedgeLayer.appendChild(bgCircle);
 
-      // Create colored circle on top with pulse animation
-      const colorCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      colorCircle.setAttribute('cx', CENTER);
-      colorCircle.setAttribute('cy', CENTER);
-      colorCircle.setAttribute('r', RADIUS.FULL);
-      colorCircle.setAttribute('fill', state.color);
-      colorCircle.setAttribute('class', 'clock-blink-color');
-      wedgeLayer.appendChild(colorCircle);
+      if (state.displayMode === 'digital') {
+        // Digital mode: static colored center + pulsing ring + overtime counter
+
+        // Create static colored center circle (inner 2/3)
+        const centerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        centerCircle.setAttribute('cx', CENTER);
+        centerCircle.setAttribute('cy', CENTER);
+        centerCircle.setAttribute('r', RING_ZONE_OUTER - RING_ZONE_WIDTH); // Inner edge = 120
+        centerCircle.setAttribute('fill', state.color);
+        wedgeLayer.appendChild(centerCircle);
+
+        // Create pulsing ring (outer 1/3 zone) using a donut shape
+        const outerR = RING_ZONE_OUTER;
+        const innerR = RING_ZONE_OUTER - RING_ZONE_WIDTH;
+        const ring = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const d = [
+          'M', CENTER + outerR, CENTER,
+          'A', outerR, outerR, 0, 1, 1, CENTER - outerR, CENTER,
+          'A', outerR, outerR, 0, 1, 1, CENTER + outerR, CENTER,
+          'M', CENTER + innerR, CENTER,
+          'A', innerR, innerR, 0, 1, 0, CENTER - innerR, CENTER,
+          'A', innerR, innerR, 0, 1, 0, CENTER + innerR, CENTER,
+          'Z'
+        ].join(' ');
+        ring.setAttribute('d', d);
+        ring.setAttribute('fill', state.color);
+        ring.setAttribute('fill-rule', 'evenodd');
+        ring.setAttribute('class', 'clock-blink-color');
+        wedgeLayer.appendChild(ring);
+
+        // Start overtime counter
+        updateOvertimeText();
+        state.overtimeInterval = setInterval(updateOvertimeText, 1000);
+      } else {
+        // Analog mode: full circle pulses
+
+        // Create background circle (white in light mode, black in dark mode)
+        const bgCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        bgCircle.setAttribute('cx', CENTER);
+        bgCircle.setAttribute('cy', CENTER);
+        bgCircle.setAttribute('r', RADIUS.FULL);
+        bgCircle.setAttribute('fill', isDark ? '#111' : 'white');
+        bgCircle.setAttribute('stroke', isDark ? '#eee' : '#000');
+        bgCircle.setAttribute('stroke-width', '2');
+        wedgeLayer.appendChild(bgCircle);
+
+        // Create colored circle on top with pulse animation
+        const colorCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        colorCircle.setAttribute('cx', CENTER);
+        colorCircle.setAttribute('cy', CENTER);
+        colorCircle.setAttribute('r', RADIUS.FULL);
+        colorCircle.setAttribute('fill', state.color);
+        colorCircle.setAttribute('class', 'clock-blink-color');
+        wedgeLayer.appendChild(colorCircle);
+      }
     }
 
     function stopCompletionBlink() {
@@ -943,6 +1132,11 @@
         state.completed = false;
         ClockLogic.stopAlarm(state.alarmHandle);
         state.alarmHandle = null;
+        if (state.overtimeInterval) {
+          clearInterval(state.overtimeInterval);
+          state.overtimeInterval = null;
+        }
+        timerText.textContent = '';
         wedgeLayer.innerHTML = '';
       }
     }
@@ -1380,7 +1574,7 @@
       var savedDarkMode = ClockLogic.getCookie('clockDarkMode');
       if (savedDarkMode === '1') {
         document.body.classList.add('dark');
-        el.darkModeBtn.textContent = 'L';
+        el.darkModeBtn.textContent = '☀️';
         el.darkModeBtn.title = 'Switch to light mode';
       }
 
@@ -1389,6 +1583,13 @@
         state.sound = false;
         el.soundBtn.textContent = '🔕';
         el.soundBtn.title = 'Alarm sound off';
+      }
+
+      var savedDisplayMode = ClockLogic.getCookie('clockDisplayMode');
+      if (savedDisplayMode === 'digital') {
+        state.displayMode = 'digital';
+        el.displayModeBtn.textContent = '🔢';
+        el.displayModeBtn.title = 'Switch to analog display';
       }
 
       // Then override with URL hash (URL takes priority)
@@ -1407,13 +1608,18 @@
       }
       if (hashParams.dark === '1') {
         document.body.classList.add('dark');
-        el.darkModeBtn.textContent = 'L';
+        el.darkModeBtn.textContent = '☀️';
         el.darkModeBtn.title = 'Switch to light mode';
       }
       if (hashParams.sound === 'off') {
         state.sound = false;
         el.soundBtn.textContent = '🔕';
         el.soundBtn.title = 'Alarm sound off';
+      }
+      if (hashParams.display === 'digital') {
+        state.displayMode = 'digital';
+        el.displayModeBtn.textContent = '🔢';
+        el.displayModeBtn.title = 'Switch to analog display';
       }
       if (hashParams.time) {
         el.timeInput.value = hashParams.time;
@@ -1442,7 +1648,7 @@
     el.darkModeBtn.addEventListener('click', function() {
       document.body.classList.toggle('dark');
       var isDark = document.body.classList.contains('dark');
-      el.darkModeBtn.textContent = isDark ? 'L' : 'D';
+      el.darkModeBtn.textContent = isDark ? '☀️' : '🌙';
       el.darkModeBtn.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
       ClockLogic.setCookie('clockDarkMode', isDark ? '1' : '0', 365);
       ClockLogic.updateHash(state);
@@ -1456,6 +1662,17 @@
       el.soundBtn.title = state.sound ? 'Alarm sound on' : 'Alarm sound off';
       ClockLogic.setCookie('clockSound', state.sound ? 'on' : 'off', 365);
       ClockLogic.updateHash(state);
+    });
+
+    // Display mode toggle (analog/digital)
+    el.displayModeBtn.addEventListener('click', function() {
+      state.displayMode = state.displayMode === 'analog' ? 'digital' : 'analog';
+      var isDigital = state.displayMode === 'digital';
+      el.displayModeBtn.textContent = isDigital ? '🔢' : '🕐';
+      el.displayModeBtn.title = isDigital ? 'Switch to analog display' : 'Switch to digital display';
+      ClockLogic.setCookie('clockDisplayMode', state.displayMode, 365);
+      ClockLogic.updateHash(state);
+      render();
     });
 
     // Fullscreen toggle
