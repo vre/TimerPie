@@ -724,76 +724,155 @@
         history.replaceState(null, '', window.location.pathname + hash);
       },
 
-      // Web Audio API alarm - generates beep pattern without audio files
+      // Generate a WAV beep as base64 data URI (works better in background than Web Audio API)
+      generateBeepDataUri: function() {
+        var sampleRate = 44100;
+        var duration = 0.75;
+        var frequency1 = 220; // A3
+        var frequency2 = 277; // C#4
+        var numSamples = Math.floor(sampleRate * duration);
+
+        // WAV header
+        var buffer = new ArrayBuffer(44 + numSamples * 2);
+        var view = new DataView(buffer);
+
+        // RIFF header
+        var writeString = function(offset, str) {
+          for (var i = 0; i < str.length; i++) {
+            view.setUint8(offset + i, str.charCodeAt(i));
+          }
+        };
+        writeString(0, 'RIFF');
+        view.setUint32(4, 36 + numSamples * 2, true);
+        writeString(8, 'WAVE');
+        writeString(12, 'fmt ');
+        view.setUint32(16, 16, true); // chunk size
+        view.setUint16(20, 1, true); // PCM
+        view.setUint16(22, 1, true); // mono
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true); // byte rate
+        view.setUint16(32, 2, true); // block align
+        view.setUint16(34, 16, true); // bits per sample
+        writeString(36, 'data');
+        view.setUint32(40, numSamples * 2, true);
+
+        // Generate samples with envelope
+        for (var i = 0; i < numSamples; i++) {
+          var t = i / sampleRate;
+          // ADSR envelope
+          var env;
+          if (t < 0.04) env = t / 0.04; // attack
+          else if (t < 0.6) env = 1.0; // sustain
+          else env = Math.max(0, 1 - (t - 0.6) / 0.15); // release
+
+          // Two sine waves mixed
+          var sample = Math.sin(2 * Math.PI * frequency1 * t) * 0.3 +
+                       Math.sin(2 * Math.PI * frequency2 * t) * 0.15;
+          sample *= env;
+
+          // Convert to 16-bit PCM
+          var pcm = Math.max(-32768, Math.min(32767, Math.floor(sample * 32767)));
+          view.setInt16(44 + i * 2, pcm, true);
+        }
+
+        // Convert to base64
+        var binary = '';
+        var bytes = new Uint8Array(buffer);
+        for (var i = 0; i < bytes.length; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        return 'data:audio/wav;base64,' + btoa(binary);
+      },
+
+      // Cached beep data URI
+      beepDataUri: null,
+
+      // Play alarm using HTML5 Audio element (better background support than Web Audio API)
       playAlarm: function(state) {
         if (!state.sound) return null;
-        try {
-          var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        } catch (e) {
+
+        var handle = { audios: [], timeout: null, notifications: [], retryTimeout: null };
+        var self = this;
+
+        // Build absolute icon URL for reliability
+        var iconUrl = window.location.href.replace(/[^/]*$/, '') + 'icons/icon-192.png';
+
+        // Show system notification for background tabs
+        function showNotification(tag, body) {
+          if ('Notification' in window && Notification.permission === 'granted') {
+            try {
+              var notif = new Notification('Timer Complete', {
+                body: body,
+                icon: iconUrl,
+                tag: tag,
+                requireInteraction: true,
+                silent: false
+              });
+              handle.notifications.push(notif);
+              return notif;
+            } catch (e) {}
+          }
           return null;
         }
-        var beepCount = 0;
-        var maxBeeps = 3;
 
-        function beep() {
-          var now = audioCtx.currentTime;
+        showNotification('tasktimer-alarm', 'Your timer has finished!');
 
-          // Main tone - sine wave for smooth sound
-          var osc1 = audioCtx.createOscillator();
-          var gain1 = audioCtx.createGain();
-          osc1.type = 'sine';
-          osc1.frequency.value = 220; // A3
-          osc1.connect(gain1);
-          gain1.connect(audioCtx.destination);
-
-          // Second harmonic for richness
-          var osc2 = audioCtx.createOscillator();
-          var gain2 = audioCtx.createGain();
-          osc2.type = 'sine';
-          osc2.frequency.value = 277; // C#4 (major third)
-          osc2.connect(gain2);
-          gain2.connect(audioCtx.destination);
-
-          // ADSR envelope - attack, sustain, release
-          var peakTime = now + 0.04; // 40ms attack
-          var sustainEnd = now + 0.6; // sustain until 600ms
-          var endTime = now + 0.75; // 150ms release
-
-          // Main tone envelope
-          gain1.gain.setValueAtTime(0, now);
-          gain1.gain.linearRampToValueAtTime(0.3, peakTime);
-          gain1.gain.setValueAtTime(0.3, sustainEnd);
-          gain1.gain.exponentialRampToValueAtTime(0.001, endTime);
-
-          // Harmony envelope (quieter)
-          gain2.gain.setValueAtTime(0, now);
-          gain2.gain.linearRampToValueAtTime(0.15, peakTime);
-          gain2.gain.setValueAtTime(0.15, sustainEnd);
-          gain2.gain.exponentialRampToValueAtTime(0.001, endTime);
-
-          osc1.start(now);
-          osc1.stop(endTime);
-          osc2.start(now);
-          osc2.stop(endTime);
-        }
-
-        function playPattern() {
-          if (beepCount >= maxBeeps) {
-            audioCtx.close();
-            return null;
+        // Retry notification after 3 seconds if document still hidden
+        handle.retryTimeout = setTimeout(function() {
+          if (document.hidden) {
+            showNotification('tasktimer-alarm-retry', 'Timer waiting - click to view');
           }
-          beep();
-          beepCount++;
-          return setTimeout(playPattern, 1125); // ~1.1s between beeps
+        }, 3000);
+
+        // Set dock badge (works on macOS PWA)
+        if ('setAppBadge' in navigator) {
+          navigator.setAppBadge(1).catch(function() {});
         }
 
-        return { interval: playPattern(), audioCtx: audioCtx };
+        // Generate beep sound (cached)
+        if (!this.beepDataUri) {
+          this.beepDataUri = this.generateBeepDataUri();
+        }
+
+        // Play 3 beeps using Audio elements
+        var beepCount = 0;
+        var playBeep = function() {
+          if (beepCount >= 3) return;
+          var audio = new Audio(self.beepDataUri);
+          audio.volume = 1.0;
+          handle.audios.push(audio);
+          audio.play().catch(function() {});
+          beepCount++;
+          if (beepCount < 3) {
+            handle.timeout = setTimeout(playBeep, 1125);
+          }
+        };
+
+        playBeep();
+        return handle;
       },
 
       stopAlarm: function(alarmHandle) {
         if (alarmHandle) {
-          if (alarmHandle.interval) clearTimeout(alarmHandle.interval);
-          if (alarmHandle.audioCtx) alarmHandle.audioCtx.close();
+          if (alarmHandle.timeout) clearTimeout(alarmHandle.timeout);
+          if (alarmHandle.retryTimeout) clearTimeout(alarmHandle.retryTimeout);
+          if (alarmHandle.audios) {
+            alarmHandle.audios.forEach(function(a) { a.pause(); });
+          }
+          if (alarmHandle.notifications) {
+            alarmHandle.notifications.forEach(function(n) { n.close(); });
+          }
+          // Clear dock badge
+          if ('clearAppBadge' in navigator) {
+            navigator.clearAppBadge().catch(function() {});
+          }
+        }
+      },
+
+      // Request notification permission (call on user interaction)
+      requestNotificationPermission: function() {
+        if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission();
         }
       },
 
@@ -826,6 +905,70 @@
     // Expose for testing
     if (typeof window !== 'undefined') {
       window.ClockLogic = ClockLogic;
+    }
+
+    // ============================================
+    // BACKGROUND TIMER WORKER
+    // Web Workers are NOT throttled in background tabs
+    // ============================================
+    var timerWorker = null;
+    try {
+      var workerCode = [
+        'var endTime = null;',
+        'self.onmessage = function(e) {',
+        '  if (e.data.type === "start") endTime = e.data.endTime;',
+        '  else if (e.data.type === "stop") endTime = null;',
+        '};',
+        'setInterval(function() {',
+        '  if (endTime && Date.now() >= endTime) {',
+        '    self.postMessage({ type: "complete" });',
+        '    endTime = null;',
+        '  }',
+        '}, 500);'
+      ].join('\n');
+      var blob = new Blob([workerCode], { type: 'application/javascript' });
+      timerWorker = new Worker(URL.createObjectURL(blob));
+    } catch (e) {
+      // Web Worker not available (e.g., file:// protocol) - fallback to main thread
+      timerWorker = null;
+    }
+
+    // Pre-cache beep audio on page load for faster playback
+    ClockLogic.beepDataUri = ClockLogic.generateBeepDataUri();
+
+    // Handle worker completion message (runs even in background tabs)
+    function handleWorkerComplete() {
+      if (!state.running || state.completed) return;
+      state.remaining = 0;
+      state.running = false;
+      state.paused = false;
+      ClockLogic.releaseWakeLock();
+      document.body.classList.remove('running');
+      if (el.goBtn) {
+        el.goBtn.classList.remove('running');
+        el.goBtn.textContent = 'Go';
+        el.goBtn.title = 'Start the timer';
+        el.goBtn.disabled = false;
+      }
+      if (state.animFrame !== null) {
+        cancelAnimationFrame(state.animFrame);
+        state.animFrame = null;
+      }
+      // Trigger alarm - this is the critical part for background notification
+      if (typeof startCompletionBlink === 'function') {
+        startCompletionBlink();
+      }
+      if (typeof updateTitle === 'function') {
+        updateTitle();
+      }
+    }
+
+    if (timerWorker) {
+      timerWorker.onmessage = function(e) {
+        if (e.data.type === 'complete') {
+          handleWorkerComplete();
+        }
+      };
     }
 
     // ============================================
@@ -1332,6 +1475,7 @@
         state.running = false;
         state.paused = false;
         ClockLogic.releaseWakeLock();
+        if (timerWorker) timerWorker.postMessage({ type: 'stop' });
         document.body.classList.remove('running');
         el.goBtn.classList.remove('running');
         el.goBtn.textContent = 'Go';
@@ -1394,6 +1538,9 @@
       const parsed = parseInput(input);
       if (!parsed) return;
 
+      // Request notification permission on first timer start
+      ClockLogic.requestNotificationPermission();
+
       // Stop completion blink if active
       stopCompletionBlink();
 
@@ -1446,6 +1593,15 @@
       state.running = true;
       state.paused = false;
       ClockLogic.requestWakeLock();
+
+      // Start background worker for reliable completion detection
+      if (timerWorker) {
+        timerWorker.postMessage({
+          type: 'start',
+          endTime: state.startTime + parsed.total * 60000
+        });
+      }
+
       el.goBtn.classList.add('running');
       document.body.classList.add('running');
       if (state.mode === 'end') {
@@ -1463,6 +1619,7 @@
       state.paused = true;
       state.running = false;
       ClockLogic.releaseWakeLock();
+      if (timerWorker) timerWorker.postMessage({ type: 'stop' });
       document.body.classList.remove('running');
       if (state.animFrame !== null) {
         cancelAnimationFrame(state.animFrame);
@@ -1651,6 +1808,7 @@
           cancelAnimationFrame(state.animFrame);
           state.animFrame = null;
         }
+        if (timerWorker) timerWorker.postMessage({ type: 'stop' });
         document.body.classList.remove('running');
         el.goBtn.classList.remove('running');
         ClockLogic.releaseWakeLock();

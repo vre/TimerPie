@@ -117,5 +117,10 @@
 ## UI Improvements
 - [x] 92. Control layout redesign with segmented button groups and CSS tooltips
 
+## Background Alarm
+- [x] 93. Web Worker for background timer: reliable completion detection even when tab is in background or on different virtual desktop
+- [x] 94. Improved notifications: absolute icon URL, retry mechanism, dock badge (PWA)
+- [x] 95. Pre-cached audio: beep sound generated on page load for faster playback
+
 ## Future Enhancements
 - [ ] 61. Safari PiP support: re-enable when Safari supports canvas captureStream with PiP (check WebKit bug 181663)
