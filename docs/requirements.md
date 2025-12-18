@@ -103,5 +103,9 @@
 - [x] 83. Seconds precision: switching to END mode preserves seconds in end time (e.g., 13:45:25 not 13:45:00)
 - [x] 84. Space key respects mode: Space shortcut for pause/resume is disabled in END mode
 
+## Visual Refinements (v2)
+- [x] 85. Light mode pie border: stroke matches fill color (no black border)
+- [x] 86. Moving edge indicator: black edge line in light mode, white in dark mode
+
 ## Future Enhancements
 - [ ] 61. Safari PiP support: re-enable when Safari supports canvas captureStream with PiP (check WebKit bug 181663)

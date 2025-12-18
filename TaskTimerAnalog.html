@@ -774,7 +774,7 @@
       let diff = end - start;
       if (diff < 0) diff += 360;
       const isDark = document.body.classList.contains('dark');
-      const strokeColor = isDark ? color : '#000';
+      const strokeColor = color; // No black border, stroke matches fill
 
       const x1 = CENTER + circle.r * Math.cos(startRad);
       const y1 = CENTER + circle.r * Math.sin(startRad);
@@ -823,20 +823,18 @@
       if (opacity < 1) path.setAttribute('fill-opacity', opacity);
       g.appendChild(path);
 
-      // In dark mode, add white edge line following time (moving edge)
+      // Add edge line following time (moving edge)
       // CCW: end edge moves, CW/END: start edge moves
-      if (isDark) {
-        const movingEdge = (state.mode === 'ccw') ? { x: x2, y: y2 } : { x: x1, y: y1 };
-        const edge = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        edge.setAttribute('x1', CENTER);
-        edge.setAttribute('y1', CENTER);
-        edge.setAttribute('x2', movingEdge.x);
-        edge.setAttribute('y2', movingEdge.y);
-        edge.setAttribute('stroke', '#fff');
-        edge.setAttribute('stroke-width', '2');
-        if (opacity < 1) edge.setAttribute('stroke-opacity', opacity);
-        g.appendChild(edge);
-      }
+      const movingEdge = (state.mode === 'ccw') ? { x: x2, y: y2 } : { x: x1, y: y1 };
+      const edge = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      edge.setAttribute('x1', CENTER);
+      edge.setAttribute('y1', CENTER);
+      edge.setAttribute('x2', movingEdge.x);
+      edge.setAttribute('y2', movingEdge.y);
+      edge.setAttribute('stroke', isDark ? '#fff' : '#000');
+      edge.setAttribute('stroke-width', '2');
+      if (opacity < 1) edge.setAttribute('stroke-opacity', opacity);
+      g.appendChild(edge);
       return g;
     }
 
