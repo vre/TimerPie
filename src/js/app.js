@@ -689,6 +689,9 @@
         e.stopPropagation();
         state.color = this.dataset.color;
         el.colorBtn.style.background = state.color;
+        // Update PWA theme color to match
+        var themeColor = document.querySelector('meta[name="theme-color"]');
+        if (themeColor) themeColor.setAttribute('content', state.color);
         el.colorMenu.classList.remove('show');
         el.colorBtn.setAttribute('aria-expanded', 'false');
         el.colorBtn.focus();
@@ -1323,6 +1326,9 @@
     });
 
     el.colorBtn.style.background = state.color;
+    // Update PWA theme color to match selected color
+    var themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) themeColorMeta.setAttribute('content', state.color);
     // Only disable Go button if no time was loaded from URL
     if (!state.total) {
       el.goBtn.disabled = true;
