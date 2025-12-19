@@ -183,6 +183,7 @@ Changes listed in chronological order. Deprecated features marked with ~striketh
 126. UI defaults: swapped CW/CCW button order, 5-min marks now default
 127. Screenshot automation: `scripts/screenshots.sh` with Chrome headless + ImageMagick
 128. URL params for automation: `autostart=1` starts timer on load, `controls=0` hides controls
+129. FIX: Tooltip line-height inheritance from icon buttons
 
 ## Future
 
