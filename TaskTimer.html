@@ -1111,7 +1111,9 @@
         '}, 100);' // Check every 100ms for better accuracy
       ].join('\n');
       var blob = new Blob([workerCode], { type: 'application/javascript' });
-      timerWorker = new Worker(URL.createObjectURL(blob));
+      var blobUrl = URL.createObjectURL(blob);
+      timerWorker = new Worker(blobUrl);
+      URL.revokeObjectURL(blobUrl); // Revoke immediately after worker creation to prevent memory leak
     } catch (e) {
       // Web Worker not available (e.g., file:// protocol) - fallback to main thread
       timerWorker = null;
