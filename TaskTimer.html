@@ -1122,8 +1122,7 @@
       timerWorker = null;
     }
 
-    // Pre-cache beep audio on page load for faster playback
-    ClockLogic.beepDataUri = ClockLogic.generateBeepDataUri();
+    // Beep audio is lazy-generated on first alarm (saves ~66KB base64 work on load)
 
     // Handle worker completion message (runs even in background tabs)
     function handleWorkerComplete() {
