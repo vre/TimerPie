@@ -9,7 +9,7 @@
 - NO CODE before test
 - NO BUGFIX before regression test
 - REFACTOR following clean code principles when tests pass
-- UPDATE `docs/requirements.md` for every user accepted feature/change
+- UPDATE `CHANGELOG.md` for every user accepted feature/change
 - BEFORE commit run 'npm run build'
 - COMMIT with oneliner commit messages starting with verb, no coauthors
 
