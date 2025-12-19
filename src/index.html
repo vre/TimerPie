@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<!--
+  TaskTimer Analog
+  Copyright (c) 2025 Ville Reijonen
+  MIT License - https://github.com/vre/tasktimer
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#ff6b35">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>TaskTimer</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- BUILD:CSS -->
+</head>
+<body>
+  <div class="container">
+    <div class="controls">
+      <div class="control-row">
+        <div class="color-dropdown">
+          <button class="color-btn" id="colorBtn" title="Select clock color" aria-label="Select color" aria-expanded="false" aria-haspopup="true"></button>
+          <div class="color-menu" id="colorMenu" role="menu" aria-label="Color options">
+            <button class="color-option" style="background: #ff6b35;" data-color="#ff6b35" role="menuitem" aria-label="Orange"></button>
+            <button class="color-option" style="background: #4a90e2;" data-color="#4a90e2" role="menuitem" aria-label="Blue"></button>
+            <button class="color-option" style="background: #50c878;" data-color="#50c878" role="menuitem" aria-label="Green"></button>
+            <button class="color-option" style="background: #e74c3c;" data-color="#e74c3c" role="menuitem" aria-label="Red"></button>
+            <button class="color-option" style="background: #9b59b6;" data-color="#9b59b6" role="menuitem" aria-label="Purple"></button>
+            <button class="color-option" style="background: #f1c40f;" data-color="#f1c40f" role="menuitem" aria-label="Yellow"></button>
+          </div>
+        </div>
+        <button class="icon-btn" id="darkModeBtn" title="Switch to dark mode" aria-label="Switch to dark mode">🌙</button>
+        <button class="icon-btn" id="displayModeBtn" title="Switch to digital display" aria-label="Switch display mode">🔢</button>
+        <span style="flex: 1;"></span>
+        <span class="mark-group">
+          <button class="mode-btn active" data-marks="15" title="Show 15-minute labels">15</button>
+          <button class="mode-btn" data-marks="5" title="Show 5-minute labels">5</button>
+          <button class="mode-btn" data-marks="0" title="Hide labels">-</button>
+        </span>
+      </div>
+      <div class="divider"></div>
+      <div class="control-row">
+        <span class="mode-group">
+          <button class="mode-btn active" data-mode="ccw" title="Counter-clockwise mode">CCW</button>
+          <button class="mode-btn" data-mode="cw" title="Clockwise mode">CW</button>
+          <button class="mode-btn" data-mode="end" title="Ending time mode">END</button>
+        </span>
+        <input type="text" id="time" placeholder="mins">
+        <button class="go-btn" id="goBtn">Go</button>
+      </div>
+      <div class="preset-row">
+        <span class="preset-group">
+          <button class="preset-btn" data-preset="5">5</button>
+          <button class="preset-btn" data-preset="10">10</button>
+          <button class="preset-btn" data-preset="15">15</button>
+        </span>
+        <span class="preset-group">
+          <button class="preset-btn" data-preset="20">20</button>
+          <button class="preset-btn" data-preset="25">25</button>
+          <button class="preset-btn" data-preset="30">30</button>
+        </span>
+        <span class="preset-group">
+          <button class="preset-btn" data-preset="45">45</button>
+          <button class="preset-btn" data-preset="60">60</button>
+          <button class="preset-btn" data-preset="90">90</button>
+        </span>
+      </div>
+      <div class="divider"></div>
+      <div class="control-row">
+        <button class="icon-btn" id="soundBtn" title="Turn alarm on" aria-label="Toggle alarm sound">🔕</button>
+        <span style="flex: 1;"></span>
+        <button class="fullscreen-btn" id="pipBtn" title="Picture-in-Picture mode" aria-label="Picture-in-Picture">⧉</button>
+        <button class="fullscreen-btn" id="fullscreenBtn" title="Go full-screen" aria-label="Toggle fullscreen">⛶</button>
+      </div>
+    </div>
+    <button class="exit-fullscreen" id="exitFullscreenBtn">Exit Fullscreen</button>
+    <div class="clock-container">
+      <div class="clock-wrapper" id="clockWrapper">
+        <canvas id="wedgeCanvas"></canvas>
+        <svg id="clock" width="450" height="460" viewBox="0 0 450 460" role="img" aria-labelledby="clockTitle">
+          <title id="clockTitle">Countdown Timer</title>
+        </svg>
+      </div>
+    </div>
+    <div id="timerStatus" role="status" aria-live="polite" class="sr-only"></div>
+    <canvas id="pipCanvas" width="300" height="300" style="display:none;"></canvas>
+    <video id="pipVideo" style="display:none;" muted></video>
+  </div>
+
+  <script src="js/clock-logic.js"></script>
+  <script src="js/app.js"></script>
+  <!-- BUILD:JS -->
+</body>
+</html>

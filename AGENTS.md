@@ -8,17 +8,31 @@
   - The Web Application Hacker's Handbook
 - NO CODE before test
 - NO BUGFIX before regression test
-- AFTER code do refactoring to follow clean code principles
-- Keep `docs/requirements.md` up to date
-- Oneliner commit messages starting with verb, no coauthors
+- REFACTOR following clean code principles when tests pass
+- UPDATE `docs/requirements.md` for every user accepted feature/change
+- BEFORE commit run 'npm run build'
+- COMMIT with oneliner commit messages starting with verb, no coauthors
 
 ## Project
-Single HTML file (`TaskTimerAnalog.html`) with embedded CSS/JS. No dependencies, no build step.
+Development in `src/` folder. Run `npm run build` to generate single-file `TaskTimer.html`.
 
-## Testing
+## File Structure
+- `src/index.html` - Development HTML (loads external CSS/JS)
+- `src/css/style.css` - All styles
+- `src/js/clock-logic.js` - Pure functions (testable, no side effects)
+- `src/js/app.js` - State, UI, event handlers
+- `TaskTimer.html` - Generated release file (do not edit directly)
+
+## Commands
 ```bash
-npm test
+npm run build  # Generate TaskTimer.html from src/
+npm test       # Run tests (builds first, then tests TaskTimer.html)
+npm start      # Start local server at http://localhost:8080
 ```
+
+## Development
+- **Local server**: `npm start` then open <http://localhost:8080>
+- **File protocol**: Open `src/index.html` directly in browser (works for most features)
 Tests in `tests/clock.test.js` using JSDOM.
 
 ## Architecture
