@@ -3,31 +3,33 @@
 # Requires: Chrome, ImageMagick (magick), local server running (npm start)
 
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-BASE="http://localhost:8080/#autostart=1"
+BASE="http://localhost:8080/#autostart=1&controls=0"
 OUT="screenshots"
 
 echo "Taking screenshots..."
 
-"$CHROME" --headless --screenshot="$OUT/dark-25min-controls.png" \
-  --window-size=1300,1000 "$BASE&dark=1&time=25&mode=ccw&marks=15"
+# Light mode - orange CCW 5min
+"$CHROME" --headless --screenshot="$OUT/light-orange-5min.png" \
+  --window-size=1000,1000 "$BASE&time=5&mode=ccw"
 
-"$CHROME" --headless --screenshot="$OUT/light-5min.png" \
-  --window-size=1000,1000 "$BASE&time=5&mode=ccw&controls=0"
+# Dark mode - blue CCW 26min
+"$CHROME" --headless --screenshot="$OUT/dark-blue-26min.png" \
+  --window-size=1000,1000 "$BASE&dark=1&color=4a90e2&time=26&mode=ccw"
 
-"$CHROME" --headless --screenshot="$OUT/digital-82min.png" \
-  --window-size=1000,1000 "$BASE&time=82&mode=ccw&controls=0&display=digital"
+# Digital+Analog light mode - green 83min (1:23)
+"$CHROME" --headless --screenshot="$OUT/digital-green-83min.png" \
+  --window-size=1000,1000 "$BASE&color=50c878&time=83&mode=ccw&display=digital"
 
-# END mode: calculate target time 25 mins from now
-END_TIME=$(date -v+25M +%H:%M)
-"$CHROME" --headless --screenshot="$OUT/end-mode-25min.png" \
-  --window-size=1000,1000 "$BASE&time=$END_TIME&mode=end&controls=0"
+# End time dark mode - red at 3:10
+"$CHROME" --headless --screenshot="$OUT/end-dark-red.png" \
+  --window-size=1000,1000 "$BASE&dark=1&color=e74c3c&time=3:10&mode=end"
 
 echo "Cropping..."
 
 # Trim and add 10px border (dark bg for dark mode, white for light)
-magick "$OUT/dark-25min-controls.png" -trim -bordercolor "#111" -border 10 "$OUT/dark-25min-controls.png"
-magick "$OUT/light-5min.png" -trim -bordercolor white -border 10 "$OUT/light-5min.png"
-magick "$OUT/digital-82min.png" -trim -bordercolor white -border 10 "$OUT/digital-82min.png"
-magick "$OUT/end-mode-25min.png" -trim -bordercolor white -border 10 "$OUT/end-mode-25min.png"
+magick "$OUT/light-orange-5min.png" -trim -bordercolor white -border 10 "$OUT/light-orange-5min.png"
+magick "$OUT/dark-blue-26min.png" -trim -bordercolor "#111" -border 10 "$OUT/dark-blue-26min.png"
+magick "$OUT/digital-green-83min.png" -trim -bordercolor white -border 10 "$OUT/digital-green-83min.png"
+magick "$OUT/end-dark-red.png" -trim -bordercolor "#111" -border 10 "$OUT/end-dark-red.png"
 
 echo "Done. Screenshots saved to $OUT/"
