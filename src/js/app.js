@@ -947,6 +947,16 @@
             el.goBtn.disabled = false;
           }
         }
+      } else {
+        // Default time is 5 minutes
+        el.timeInput.value = '5';
+        state.timeValue = '5';
+        var parsed = ClockLogic.parseInput('5', state.mode, new Date(), MAX_MINUTES);
+        if (parsed) {
+          state.total = parsed.total;
+          state.remaining = parsed.total;
+          el.goBtn.disabled = false;
+        }
       }
 
       // Apply mode to UI

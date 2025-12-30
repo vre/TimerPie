@@ -390,7 +390,7 @@ console.log('--------------------------------');
   // Go button
   const goBtn = document.getElementById('goBtn');
   assertNotNull(goBtn, 'Go button exists');
-  assertEqual(goBtn.disabled, true, 'Go button is initially disabled');
+  assertEqual(goBtn.disabled, false, 'Go button is initially enabled (default time 5)');
 
   // SVG
   const svg = document.getElementById('clock');
@@ -478,13 +478,13 @@ console.log('-------------------------------');
   // Canvas should exist
   assert(wedgeCanvas !== null, 'Wedge canvas exists');
 
-  // Initially no remaining time
-  assertEqual(state.remaining, 0, 'No remaining time initially');
+  // Initially default time of 5 minutes
+  assertEqual(state.remaining, 5, 'Default remaining time is 5 minutes');
 
   // Type a number - should update state for preview
   timeInput.value = '30';
   timeInput.dispatchEvent(new dom.window.Event('input'));
-  assert(state.remaining > 0 || state.total > 0, 'Wedge appears after typing "30"');
+  assertEqual(state.remaining, 30, 'Wedge shows 30 minutes after typing "30"');
 
   // Clear input - state should reset
   timeInput.value = '';
@@ -1508,6 +1508,47 @@ console.log('-------------------------------');
   assert(document.querySelectorAll('[data-marks]')[1].classList.contains('active'), '5-min marks loaded from URL');
   assert(document.body.classList.contains('dark'), 'Dark mode loaded from URL');
   assertEqual(document.getElementById('time').value, '45', 'Time loaded from URL');
+
+  dom.window.close();
+})();
+
+(function testDefaultTimeIs5() {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TimerPie.html'), 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously',
+    pretendToBeVisual: true,
+    url: 'http://localhost/'
+  });
+  const { document } = dom.window;
+
+  assertEqual(document.getElementById('time').value, '5', 'Default time is 5 when no URL param');
+  assertEqual(document.getElementById('goBtn').disabled, false, 'Go button enabled with default time');
+
+  dom.window.close();
+})();
+
+(function testTimeHashNotShownWhen5() {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'TimerPie.html'), 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously',
+    pretendToBeVisual: true,
+    url: 'http://localhost/'
+  });
+  const { document } = dom.window;
+
+  // Default is 5, hash should not contain time
+  assert(!dom.window.location.hash.includes('time='), 'Hash does not include time when value is 5');
+
+  // Change to 10, hash should contain time
+  const timeInput = document.getElementById('time');
+  timeInput.value = '10';
+  timeInput.dispatchEvent(new dom.window.Event('input'));
+  assert(dom.window.location.hash.includes('time=10'), 'Hash includes time when value is 10');
+
+  // Change back to 5, hash should not contain time
+  timeInput.value = '5';
+  timeInput.dispatchEvent(new dom.window.Event('input'));
+  assert(!dom.window.location.hash.includes('time='), 'Hash does not include time after changing back to 5');
 
   dom.window.close();
 })();

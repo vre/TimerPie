@@ -206,7 +206,7 @@
         if (state.displayMode === 'digital') {
           params.push('display=digital');
         }
-        if (state.timeValue) {
+        if (state.timeValue && state.timeValue !== '5') {
           params.push('time=' + encodeURIComponent(state.timeValue));
         }
         const hash = params.length > 0 ? '#' + params.join('&') : '';

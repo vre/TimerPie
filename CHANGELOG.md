@@ -197,7 +197,8 @@ Changes listed in chronological order. Deprecated features marked with ~striketh
 ## 2025-12-30
 
 ### Small adjustments
-135.   When selecting time field select the text on focus.   
+135. When selecting time field select the text on focus.
+136. By default 5mins entered to the time field. Field selected on page load.  
 
 ## Future
 
