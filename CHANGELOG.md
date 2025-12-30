@@ -200,6 +200,7 @@ Changes listed in chronological order. Deprecated features marked with ~striketh
 135. When selecting time field select the text on focus.
 136. By default 5mins entered to the time field. Field selected on page load.
 137. Set dark mode to be the default mode.
+138. Added tooltip to the time field.
 
 ## Future
 
