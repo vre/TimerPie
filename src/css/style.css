@@ -541,6 +541,9 @@
     }
     .install-qr svg {
       color-scheme: light only;
+      background: white;
+      padding: 0.5rem;
+      border-radius: 0.25rem;
     }
     .install-qr svg path[fill] {
       fill: #ffffff !important;
